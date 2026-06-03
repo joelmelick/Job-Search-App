@@ -7,7 +7,7 @@ export type JobStatus =
   | "Offer"
   | "Passed";
 
-export type PostingStatus = "live" | "closed" | "unknown";
+export type PostingStatus = "live" | "closed" | "unknown" | "down";
 
 export type PaySource = "listed" | "estimated" | "glassdoor" | "levels";
 

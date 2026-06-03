@@ -130,6 +130,7 @@ export default function JobRow({ job, onUpdate, onDelete }: JobRowProps) {
           className="text-xs border border-gray-200 rounded px-2 py-1 bg-white"
         >
           <option value="live">Live</option>
+          <option value="down">⚠️ Down</option>
           <option value="closed">Closed</option>
           <option value="unknown">Unknown</option>
         </select>
