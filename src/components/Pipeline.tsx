@@ -176,13 +176,15 @@ export default function Pipeline({ initialJobs }: PipelineProps) {
                 <th className="py-3 px-4 font-medium">Last Action</th>
                 <th className="py-3 px-4 font-medium">Next Action</th>
                 <th className="py-3 px-4 font-medium">Added</th>
+                <th className="py-3 px-4 font-medium">Workflow</th>
+                <th className="py-3 px-4 font-medium">Docs</th>
                 <th className="py-3 px-4 font-medium"></th>
               </tr>
             </thead>
             <tbody>
               {jobs.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-gray-400">
+                  <td colSpan={11} className="py-12 text-center text-gray-400">
                     No jobs in pipeline yet. Add one above or promote a
                     candidate.
                   </td>

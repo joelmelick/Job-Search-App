@@ -29,6 +29,12 @@ export interface Job {
   notes_path: string | null;
   resume_path: string | null;
   cover_path: string | null;
+  workflow_status: string;
+  folder_path: string | null;
+  storage_resume_url: string | null;
+  storage_cover_url: string | null;
+  storage_notes_url: string | null;
+  linkedin_contacts: object[];
   created_at: string;
 }
 
@@ -54,6 +60,8 @@ export interface Candidate {
   promoted: boolean;
   dismissed: boolean;
   dismiss_reason: string | null;
+  workflow_status: string;
+  folder_path: string | null;
   created_at: string;
 }
 

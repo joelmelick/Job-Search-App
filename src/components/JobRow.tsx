@@ -9,6 +9,49 @@ interface JobRowProps {
   onDelete: (id: string) => void;
 }
 
+function WorkflowBadge({ status }: { status: string }) {
+  if (status === "complete") {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 px-2 py-0.5 rounded-full">
+        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 00-1.414 0L8 12.586 4.707 9.293a1 1 0 00-1.414 1.414l4 4a1 1 0 001.414 0l8-8a1 1 0 000-1.414z" clipRule="evenodd" />
+        </svg>
+        Done
+      </span>
+    );
+  }
+  if (status === "running") {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs font-medium text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">
+        <svg className="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+        </svg>
+        Running
+      </span>
+    );
+  }
+  if (status === "error") {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs font-medium text-red-700 bg-red-50 px-2 py-0.5 rounded-full">
+        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M18 10A8 8 0 11 2 10a8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+        </svg>
+        Error
+      </span>
+    );
+  }
+  // pending (default)
+  return (
+    <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+      </svg>
+      Pending
+    </span>
+  );
+}
+
 function Stars({
   value,
   onChange,
@@ -163,6 +206,53 @@ export default function JobRow({ job, onUpdate, onDelete }: JobRowProps) {
       {/* Date added */}
       <td className="py-3 px-4 text-sm text-gray-500 whitespace-nowrap">
         {job.date_added}
+      </td>
+
+      {/* Workflow status */}
+      <td className="py-3 px-4">
+        <WorkflowBadge status={job.workflow_status} />
+      </td>
+
+      {/* Document links */}
+      <td className="py-3 px-4">
+        <div className="flex gap-2 items-center">
+          {job.storage_resume_url && (
+            <a
+              href={job.storage_resume_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Resume"
+              className="text-[#1F4E79] hover:text-[#2563a8] text-base"
+            >
+              📄
+            </a>
+          )}
+          {job.storage_cover_url && (
+            <a
+              href={job.storage_cover_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Cover Letter"
+              className="text-[#1F4E79] hover:text-[#2563a8] text-base"
+            >
+              ✉️
+            </a>
+          )}
+          {job.storage_notes_url && (
+            <a
+              href={job.storage_notes_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Notes"
+              className="text-[#1F4E79] hover:text-[#2563a8] text-base"
+            >
+              📝
+            </a>
+          )}
+          {!job.storage_resume_url && !job.storage_cover_url && !job.storage_notes_url && (
+            <span className="text-gray-300 text-xs">—</span>
+          )}
+        </div>
       </td>
 
       {/* Actions */}
