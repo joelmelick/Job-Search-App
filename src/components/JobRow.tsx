@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Job, JOB_STATUSES, JobStatus } from "@/lib/types";
+import DocModal from "./DocModal";
 
 interface JobRowProps {
   job: Job;
@@ -98,6 +99,7 @@ export default function JobRow({ job, onUpdate, onDelete }: JobRowProps) {
   const [lastAction, setLastAction] = useState(job.last_action ?? "");
   const [nextAction, setNextAction] = useState(job.next_action ?? "");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [docsOpen, setDocsOpen] = useState(false);
 
   const handleBlur = (field: keyof Job, value: string) => {
     if (value !== (job[field] ?? "")) {
@@ -215,44 +217,19 @@ export default function JobRow({ job, onUpdate, onDelete }: JobRowProps) {
 
       {/* Document links */}
       <td className="py-3 px-4">
-        <div className="flex gap-2 items-center">
-          {job.storage_resume_url && (
-            <a
-              href={job.storage_resume_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              title="Resume"
-              className="text-[#1F4E79] hover:text-[#2563a8] text-base"
-            >
-              📄
-            </a>
-          )}
-          {job.storage_cover_url && (
-            <a
-              href={job.storage_cover_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              title="Cover Letter"
-              className="text-[#1F4E79] hover:text-[#2563a8] text-base"
-            >
-              ✉️
-            </a>
-          )}
-          {job.storage_notes_url && (
-            <a
-              href={job.storage_notes_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              title="Notes"
-              className="text-[#1F4E79] hover:text-[#2563a8] text-base"
-            >
-              📝
-            </a>
-          )}
-          {!job.storage_resume_url && !job.storage_cover_url && !job.storage_notes_url && (
-            <span className="text-gray-300 text-xs">—</span>
-          )}
-        </div>
+        {job.workflow_status === "complete" ? (
+          <button
+            onClick={() => setDocsOpen(true)}
+            className="text-xs font-medium px-3 py-1.5 rounded-lg bg-[#1F4E79] text-white hover:bg-[#2563a8] transition-colors whitespace-nowrap"
+          >
+            Docs
+          </button>
+        ) : (
+          <span className="inline-flex items-center gap-1 text-xs text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full whitespace-nowrap">
+            ⏳ Processing
+          </span>
+        )}
+        {docsOpen && <DocModal job={job} onClose={() => setDocsOpen(false)} />}
       </td>
 
       {/* Actions */}
