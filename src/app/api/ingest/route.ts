@@ -131,6 +131,7 @@ ${pageText}`,
         pay_max: extracted.pay_max ?? null,
         company_info: extracted.company_info ?? {},
         found_date: today,
+        added_by: "joel",
       },
     ])
     .select()

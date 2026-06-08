@@ -64,6 +64,7 @@ export interface Candidate {
   workflow_status: string;
   folder_path: string | null;
   storage_outreach_url: string | null;
+  added_by: string;
   created_at: string;
 }
 
