@@ -6,17 +6,24 @@ export const maxDuration = 60;
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-export async function POST(request: NextRequest) {
+async function handleIngest(request: NextRequest) {
   const secret = process.env.INGEST_SECRET;
   if (secret) {
     const auth = request.headers.get("authorization");
-    if (auth !== `Bearer ${secret}`) {
+    const querySecret = request.nextUrl.searchParams.get("secret");
+    if (auth !== `Bearer ${secret}` && querySecret !== secret) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
   }
 
-  const body = await request.json().catch(() => null);
-  const url: string = body?.url;
+  // Accept url from JSON body (POST) or query param (GET)
+  let url: string | null = null;
+  if (request.method === "POST") {
+    const body = await request.json().catch(() => null);
+    url = body?.url ?? null;
+  } else {
+    url = request.nextUrl.searchParams.get("url");
+  }
   if (!url) return NextResponse.json({ error: "url required" }, { status: 400 });
 
   // Fetch the job posting page
@@ -140,4 +147,12 @@ ${pageText}`,
     { success: true, company: data.company, role: data.role, id: data.id },
     { status: 201 }
   );
+}
+
+export async function GET(request: NextRequest) {
+  return handleIngest(request);
+}
+
+export async function POST(request: NextRequest) {
+  return handleIngest(request);
 }
