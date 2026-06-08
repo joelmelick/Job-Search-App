@@ -1,0 +1,141 @@
+import { NextRequest, NextResponse } from "next/server";
+import Anthropic from "@anthropic-ai/sdk";
+import { supabase } from "@/lib/supabase";
+
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+export async function POST(request: NextRequest) {
+  const secret = process.env.INGEST_SECRET;
+  if (secret) {
+    const auth = request.headers.get("authorization");
+    if (auth !== `Bearer ${secret}`) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+  }
+
+  const body = await request.json().catch(() => null);
+  const url: string = body?.url;
+  if (!url) return NextResponse.json({ error: "url required" }, { status: 400 });
+
+  // Fetch the job posting page
+  let pageText = "";
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: { "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" },
+      redirect: "follow",
+    });
+    clearTimeout(timer);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const html = await res.text();
+    pageText = html
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, " ")
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 10000);
+  } catch (e) {
+    return NextResponse.json(
+      { error: `Failed to fetch URL: ${e instanceof Error ? e.message : "unknown"}` },
+      { status: 400 }
+    );
+  }
+
+  // Extract structured job data with Claude
+  const message = await anthropic.messages.create({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 1024,
+    messages: [
+      {
+        role: "user",
+        content: `Extract job posting details from the text below. Return ONLY a valid JSON object with exactly these fields:
+
+{
+  "company": "Company name",
+  "role": "Exact job title",
+  "pay_range": "e.g. $150K – $200K or Pay not listed",
+  "pay_min": 150000 or null,
+  "pay_max": 200000 or null,
+  "source": "linkedin" | "company" | "other",
+  "attributes": ["remote_friendly", "publicly_traded"],
+  "company_info": {
+    "public_or_private": "public" or "private",
+    "ticker": "TICKER (EXCHANGE)" or omit if private,
+    "last_funding": "Series X, $Xm, Mon YYYY" or omit if public,
+    "notes": "One sentence about the company"
+  }
+}
+
+Attributes to pick from (include all that apply):
+remote_friendly, hybrid, onsite, publicly_traded, private, ai_platform, security, iam, grc, siem, enterprise_saas, ml_infrastructure, agentic_ai, platform
+
+Job posting URL: ${url}
+Job posting text:
+${pageText}`,
+      },
+    ],
+  });
+
+  let extracted: Record<string, unknown>;
+  try {
+    const content = message.content[0];
+    if (content.type !== "text") throw new Error("unexpected response type");
+    const match = content.text.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error("no JSON in response");
+    extracted = JSON.parse(match[0]);
+  } catch (e) {
+    return NextResponse.json(
+      { error: `Extraction failed: ${e instanceof Error ? e.message : "unknown"}` },
+      { status: 500 }
+    );
+  }
+
+  // Build a unique candidate ID
+  const today = new Date().toISOString().slice(0, 10);
+  const dateStr = today.replace(/-/g, "");
+  const companySlug = String(extracted.company ?? "unknown")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+  const roleSlug = String(extracted.role ?? "role")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 24);
+  const id = `${companySlug}-${roleSlug}-${dateStr}`;
+
+  const { data, error } = await supabase
+    .from("candidates")
+    .insert([
+      {
+        id,
+        company: extracted.company,
+        role: extracted.role,
+        url,
+        source: extracted.source ?? "other",
+        attributes: extracted.attributes ?? [],
+        pay_range: extracted.pay_range ?? "Pay not listed",
+        pay_min: extracted.pay_min ?? null,
+        pay_max: extracted.pay_max ?? null,
+        company_info: extracted.company_info ?? {},
+        found_date: today,
+      },
+    ])
+    .select()
+    .single();
+
+  if (error) {
+    if (error.code === "23505") {
+      return NextResponse.json({ error: "Already in candidates", id }, { status: 409 });
+    }
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json(
+    { success: true, company: data.company, role: data.role, id: data.id },
+    { status: 201 }
+  );
+}
