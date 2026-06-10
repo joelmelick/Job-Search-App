@@ -1,11 +1,14 @@
 export type JobStatus =
   | "Research"
-  | "LinkedIn Reach out"
-  | "Referred"
-  | "Applied"
-  | "Interview"
-  | "Offer"
+  | "Docs Ready"
+  | "Waiting on Referral"
+  | "Application Submitted"
+  | "Recruiter Screen"
+  | "HM Screen"
+  | "Final / Offer"
   | "Passed";
+
+export type ApplicationType = "online" | "referral";
 
 export type PostingStatus = "live" | "closed" | "unknown" | "down";
 
@@ -31,6 +34,7 @@ export interface Job {
   cover_path: string | null;
   company_info: CompanyInfo;
   pursuing: boolean;
+  application_type: ApplicationType;
   workflow_status: string;
   folder_path: string | null;
   storage_resume_url: string | null;
@@ -91,20 +95,22 @@ export interface Dismissal {
 
 export const JOB_STATUSES: JobStatus[] = [
   "Research",
-  "LinkedIn Reach out",
-  "Referred",
-  "Applied",
-  "Interview",
-  "Offer",
+  "Docs Ready",
+  "Waiting on Referral",
+  "Application Submitted",
+  "Recruiter Screen",
+  "HM Screen",
+  "Final / Offer",
   "Passed",
 ];
 
 export const STATUS_COLORS: Record<JobStatus, string> = {
   Research: "bg-gray-100 text-gray-700",
-  "LinkedIn Reach out": "bg-blue-100 text-blue-700",
-  Referred: "bg-purple-100 text-purple-700",
-  Applied: "bg-yellow-100 text-yellow-700",
-  Interview: "bg-orange-100 text-orange-700",
-  Offer: "bg-green-100 text-green-700",
+  "Docs Ready": "bg-blue-100 text-blue-700",
+  "Waiting on Referral": "bg-purple-100 text-purple-700",
+  "Application Submitted": "bg-amber-100 text-amber-700",
+  "Recruiter Screen": "bg-orange-100 text-orange-700",
+  "HM Screen": "bg-rose-100 text-rose-700",
+  "Final / Offer": "bg-green-100 text-green-700",
   Passed: "bg-red-100 text-red-700",
 };
