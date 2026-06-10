@@ -36,6 +36,8 @@ export async function POST(
     pay_max: candidate.pay_max ?? null,
     pay_source: "listed",
     posting_status: "live",
+    company_info: candidate.company_info ?? {},
+    pursuing: true,
     date_added: new Date().toISOString().slice(0, 10),
   };
 

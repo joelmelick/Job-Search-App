@@ -29,6 +29,8 @@ export interface Job {
   notes_path: string | null;
   resume_path: string | null;
   cover_path: string | null;
+  company_info: CompanyInfo;
+  pursuing: boolean;
   workflow_status: string;
   folder_path: string | null;
   storage_resume_url: string | null;

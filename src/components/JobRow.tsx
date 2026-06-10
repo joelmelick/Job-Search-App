@@ -99,7 +99,11 @@ export default function JobRow({ job, onUpdate, onDelete }: JobRowProps) {
   const [lastAction, setLastAction] = useState(job.last_action ?? "");
   const [nextAction, setNextAction] = useState(job.next_action ?? "");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmArchive, setConfirmArchive] = useState(false);
   const [docsOpen, setDocsOpen] = useState(false);
+
+  const info = job.company_info ?? {};
+  const isPublic = info.public_or_private === "public";
 
   const handleBlur = (field: keyof Job, value: string) => {
     if (value !== (job[field] ?? "")) {
@@ -122,15 +126,35 @@ export default function JobRow({ job, onUpdate, onDelete }: JobRowProps) {
     <tr className="border-b border-gray-100 hover:bg-blue-50/30 transition-colors">
       {/* Company + Role */}
       <td className="py-3 px-4">
-        <a
-          href={job.job_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="font-semibold text-[#1F4E79] hover:underline block"
-        >
-          {job.company}
-        </a>
+        <div className="flex items-center gap-2 flex-wrap">
+          <a
+            href={job.job_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-[#1F4E79] hover:underline"
+          >
+            {job.company}
+          </a>
+          {info.public_or_private && (
+            <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${
+              isPublic ? "bg-blue-100 text-blue-700" : "bg-purple-100 text-purple-700"
+            }`}>
+              {isPublic ? "Public" : "Private"}
+              {isPublic && info.ticker ? ` · ${info.ticker}` : ""}
+            </span>
+          )}
+        </div>
         <span className="text-sm text-gray-600">{job.role}</span>
+        {info.last_funding && (
+          <div className="text-xs text-gray-400 mt-0.5 max-w-[280px] truncate" title={info.last_funding}>
+            {info.last_funding}
+          </div>
+        )}
+        {info.notes && !info.last_funding && (
+          <div className="text-xs text-gray-400 mt-0.5 max-w-[280px] truncate" title={info.notes}>
+            {info.notes}
+          </div>
+        )}
       </td>
 
       {/* Ranking */}
@@ -234,30 +258,56 @@ export default function JobRow({ job, onUpdate, onDelete }: JobRowProps) {
 
       {/* Actions */}
       <td className="py-3 px-4">
-        {confirmDelete ? (
-          <div className="flex gap-1">
-            <button
-              onClick={() => onDelete(job.id)}
-              className="text-xs bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
-            >
-              Confirm
-            </button>
-            <button
-              onClick={() => setConfirmDelete(false)}
-              className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded hover:bg-gray-300"
-            >
-              Cancel
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={() => setConfirmDelete(true)}
-            className="text-gray-400 hover:text-red-500 text-sm transition-colors"
-            title="Remove from pipeline"
-          >
-            ✕
-          </button>
-        )}
+        <div className="flex flex-col gap-1">
+          {confirmArchive ? (
+            <div className="flex gap-1">
+              <button
+                onClick={() => { onUpdate(job.id, { pursuing: false }); setConfirmArchive(false); }}
+                className="text-xs bg-orange-500 text-white px-2 py-1 rounded hover:bg-orange-600 whitespace-nowrap"
+              >
+                Confirm
+              </button>
+              <button
+                onClick={() => setConfirmArchive(false)}
+                className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : confirmDelete ? (
+            <div className="flex gap-1">
+              <button
+                onClick={() => onDelete(job.id)}
+                className="text-xs bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
+              >
+                Confirm
+              </button>
+              <button
+                onClick={() => setConfirmDelete(false)}
+                className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <button
+                onClick={() => setConfirmArchive(true)}
+                className="text-gray-400 hover:text-orange-500 text-xs transition-colors whitespace-nowrap"
+                title="Not pursuing — hide from pipeline"
+              >
+                Not pursuing
+              </button>
+              <button
+                onClick={() => setConfirmDelete(true)}
+                className="text-gray-400 hover:text-red-500 text-sm transition-colors"
+                title="Delete permanently"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+        </div>
       </td>
     </tr>
   );

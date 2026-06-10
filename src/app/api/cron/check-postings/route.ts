@@ -78,6 +78,7 @@ export async function GET(request: NextRequest) {
   const { data: jobs, error } = await supabase
     .from("jobs")
     .select("id, job_url, posting_status")
+    .eq("pursuing", true)
     .neq("posting_status", "closed");
 
   if (error) {

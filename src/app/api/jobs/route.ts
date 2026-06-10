@@ -5,6 +5,7 @@ export async function GET() {
   const { data, error } = await supabase
     .from("jobs")
     .select("*")
+    .eq("pursuing", true)
     .order("ranking", { ascending: false })
     .order("created_at", { ascending: false });
 
