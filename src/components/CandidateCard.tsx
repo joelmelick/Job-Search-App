@@ -26,9 +26,32 @@ export default function CandidateCard({
   onDismiss,
 }: CandidateCardProps) {
   const [showDismissModal, setShowDismissModal] = useState(false);
+  const [showJdModal, setShowJdModal] = useState(false);
+  const [jdText, setJdText] = useState("");
+  const [jdSaving, setJdSaving] = useState(false);
+  const [jdUrl, setJdUrl] = useState(candidate.jd_storage_url ?? null);
+  const [jdComplete, setJdComplete] = useState(candidate.jd_complete ?? false);
   const [dismissReason, setDismissReason] = useState("");
   const [customReason, setCustomReason] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const handleSaveJd = async () => {
+    if (!jdText.trim()) return;
+    setJdSaving(true);
+    const res = await fetch(`/api/candidates/${candidate.id}/update-jd`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: jdText }),
+    });
+    if (res.ok) {
+      const { jd_storage_url } = await res.json();
+      setJdUrl(jd_storage_url);
+      setJdComplete(true);
+      setShowJdModal(false);
+      setJdText("");
+    }
+    setJdSaving(false);
+  };
 
   const info = candidate.company_info ?? {};
   const isPublic = info.public_or_private === "public";
@@ -134,6 +157,25 @@ export default function CandidateCard({
           Found: {candidate.found_date}
         </div>
 
+        {/* JD status + paste button */}
+        <div className="flex items-center gap-2">
+          {jdComplete ? (
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 px-2 py-1 rounded-full">
+              📄 JD Saved
+            </span>
+          ) : jdUrl ? (
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 px-2 py-1 rounded-full">
+              📄 Partial JD
+            </span>
+          ) : null}
+          <button
+            onClick={() => setShowJdModal(true)}
+            className="text-xs text-gray-400 hover:text-[#1F4E79] transition-colors underline"
+          >
+            {jdComplete ? "Update JD" : jdUrl ? "Paste full JD" : "Paste JD"}
+          </button>
+        </div>
+
         {/* Actions */}
         <div className="flex gap-2 pt-1">
           <button
@@ -152,6 +194,42 @@ export default function CandidateCard({
           </button>
         </div>
       </div>
+
+      {/* JD paste modal */}
+      {showJdModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-1">Paste Job Description</h3>
+            <p className="text-sm text-gray-500 mb-1">{candidate.company} — {candidate.role}</p>
+            <p className="text-xs text-gray-400 mb-4">
+              Copy the full job description from LinkedIn or the job board and paste it below. Plain text is fine.
+            </p>
+            <textarea
+              value={jdText}
+              onChange={(e) => setJdText(e.target.value)}
+              placeholder="Paste the full job description here..."
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 focus:outline-none focus:border-[#1F4E79] resize-none"
+              rows={12}
+              autoFocus
+            />
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={handleSaveJd}
+                disabled={jdSaving || !jdText.trim()}
+                className="flex-1 bg-[#1F4E79] text-white py-2 rounded-lg text-sm font-medium hover:bg-[#2563a8] disabled:opacity-40 transition-colors"
+              >
+                {jdSaving ? "Saving..." : "Save JD"}
+              </button>
+              <button
+                onClick={() => { setShowJdModal(false); setJdText(""); }}
+                className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Dismiss modal */}
       {showDismissModal && (

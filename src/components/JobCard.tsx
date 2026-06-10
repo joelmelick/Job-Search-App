@@ -163,7 +163,14 @@ export default function JobCard({ job, onUpdate, onDelete }: JobCardProps) {
 
         {/* Footer */}
         <div className="px-4 pb-3 flex items-center justify-between gap-2 border-t border-gray-50 pt-2.5">
-          <WorkflowBadge status={job.workflow_status} />
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <WorkflowBadge status={job.workflow_status} />
+            {job.jd_storage_url && (
+              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${job.jd_complete ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"}`}>
+                {job.jd_complete ? "📄 JD" : "📄 Partial"}
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             {job.workflow_status === "complete" && (
               <button

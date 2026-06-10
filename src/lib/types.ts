@@ -35,6 +35,8 @@ export interface Job {
   company_info: CompanyInfo;
   pursuing: boolean;
   application_type: ApplicationType;
+  jd_storage_url: string | null;
+  jd_complete: boolean;
   workflow_status: string;
   folder_path: string | null;
   storage_resume_url: string | null;
@@ -71,6 +73,8 @@ export interface Candidate {
   folder_path: string | null;
   storage_outreach_url: string | null;
   added_by: string;
+  jd_storage_url: string | null;
+  jd_complete: boolean;
   created_at: string;
 }
 

@@ -6,7 +6,7 @@ import { Job } from "@/lib/types";
 
 marked.use({ gfm: true, breaks: true });
 
-type Tab = "notes" | "outreach" | "resume" | "cover";
+type Tab = "notes" | "outreach" | "resume" | "cover" | "jd";
 
 interface DocModalProps {
   job: Job;
@@ -179,6 +179,7 @@ export default function DocModal({ job, onClose }: DocModalProps) {
 
   const notes = useMarkdownContent(job.storage_notes_url);
   const outreach = useMarkdownContent(job.storage_outreach_url);
+  const jd = useMarkdownContent(job.jd_storage_url);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -187,8 +188,9 @@ export default function DocModal({ job, onClose }: DocModalProps) {
   }, [onClose]);
 
   const TABS: { id: Tab; label: string; available: boolean }[] = [
-    { id: "notes", label: "📋 Notes", available: !!job.storage_notes_url },
-    { id: "outreach", label: "💼 LinkedIn Outreach", available: !!job.storage_outreach_url },
+    { id: "jd", label: `📋 Job Description${job.jd_complete === false && job.jd_storage_url ? " ⚠" : ""}`, available: !!job.jd_storage_url },
+    { id: "notes", label: "📝 Notes", available: !!job.storage_notes_url },
+    { id: "outreach", label: "💼 Outreach", available: !!job.storage_outreach_url },
     { id: "resume", label: "📄 Resume", available: !!job.storage_resume_url },
     { id: "cover", label: "✉️ Cover Letter", available: !!job.storage_cover_url },
   ];
@@ -240,6 +242,16 @@ export default function DocModal({ job, onClose }: DocModalProps) {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-6 py-5">
+          {tab === "jd" && (
+            <>
+              {job.jd_complete === false && job.jd_storage_url && (
+                <div className="mb-4 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  ⚠ Partial JD — likely a LinkedIn job. Use the "Paste JD" button on the candidate card to add the full description.
+                </div>
+              )}
+              <MarkdownPane url={job.jd_storage_url} html={jd.html} loading={jd.loading} error={jd.error} />
+            </>
+          )}
           {tab === "notes" && (
             <MarkdownPane url={job.storage_notes_url} html={notes.html} loading={notes.loading} error={notes.error} />
           )}

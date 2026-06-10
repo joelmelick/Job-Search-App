@@ -38,6 +38,8 @@ export async function POST(
     posting_status: "live",
     company_info: candidate.company_info ?? {},
     pursuing: true,
+    jd_storage_url: candidate.jd_storage_url ?? null,
+    jd_complete: candidate.jd_complete ?? false,
     date_added: new Date().toISOString().slice(0, 10),
   };
 

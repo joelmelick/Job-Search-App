@@ -1,10 +1,48 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase-server";
 
 export const maxDuration = 60;
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+function isLoginWall(url: string, text: string): boolean {
+  if (url.includes("linkedin.com")) return true;
+  const lower = text.toLowerCase();
+  return (
+    lower.includes("join to see") ||
+    lower.includes("sign in to view") ||
+    lower.includes("log in to view") ||
+    lower.includes("join linkedin") ||
+    text.length < 600
+  );
+}
+
+function buildJdMarkdown(company: string, role: string, url: string, date: string, pageText: string): string {
+  return `# ${company} — ${role}
+
+**URL:** ${url}
+**Captured:** ${date}
+
+---
+
+${pageText.trim()}
+`;
+}
+
+async function uploadJd(id: string, markdown: string): Promise<string | null> {
+  const path = `${id}.md`;
+  const { error } = await supabaseAdmin.storage
+    .from("job-descriptions")
+    .upload(path, Buffer.from(markdown, "utf-8"), {
+      contentType: "text/markdown; charset=utf-8",
+      upsert: true,
+    });
+  if (error) return null;
+  const { data } = supabaseAdmin.storage.from("job-descriptions").getPublicUrl(path);
+  return data.publicUrl;
+}
 
 async function handleIngest(request: NextRequest) {
   const secret = process.env.INGEST_SECRET;
@@ -16,7 +54,6 @@ async function handleIngest(request: NextRequest) {
     }
   }
 
-  // Accept url from JSON body (POST) or query param (GET)
   let url: string | null = null;
   if (request.method === "POST") {
     const body = await request.json().catch(() => null);
@@ -52,6 +89,8 @@ async function handleIngest(request: NextRequest) {
       { status: 400 }
     );
   }
+
+  const jdComplete = !isLoginWall(url, pageText);
 
   // Extract structured job data with Claude
   const message = await anthropic.messages.create({
@@ -102,19 +141,22 @@ ${pageText}`,
     );
   }
 
-  // Build a unique candidate ID
+  // Build unique candidate ID
   const today = new Date().toISOString().slice(0, 10);
   const dateStr = today.replace(/-/g, "");
-  const companySlug = String(extracted.company ?? "unknown")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-  const roleSlug = String(extracted.role ?? "role")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 24);
+  const companySlug = String(extracted.company ?? "unknown").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const roleSlug = String(extracted.role ?? "role").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 24);
   const id = `${companySlug}-${roleSlug}-${dateStr}`;
+
+  // Upload JD markdown to Supabase Storage
+  const jdMarkdown = buildJdMarkdown(
+    String(extracted.company ?? "Unknown"),
+    String(extracted.role ?? "Unknown"),
+    url,
+    today,
+    pageText
+  );
+  const jdStorageUrl = await uploadJd(id, jdMarkdown);
 
   const { data, error } = await supabase
     .from("candidates")
@@ -132,6 +174,8 @@ ${pageText}`,
         company_info: extracted.company_info ?? {},
         found_date: today,
         added_by: "joel",
+        jd_storage_url: jdStorageUrl,
+        jd_complete: jdComplete,
       },
     ])
     .select()
@@ -145,7 +189,7 @@ ${pageText}`,
   }
 
   return NextResponse.json(
-    { success: true, company: data.company, role: data.role, id: data.id },
+    { success: true, company: data.company, role: data.role, id: data.id, jd_complete: jdComplete },
     { status: 201 }
   );
 }
