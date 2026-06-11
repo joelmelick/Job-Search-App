@@ -3,23 +3,28 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 
 type State = "loading" | "success" | "duplicate" | "error";
 
 function IngestContent() {
-  const params = useSearchParams();
   const [state, setState] = useState<State>("loading");
   const [message, setMessage] = useState("");
   const [jdComplete, setJdComplete] = useState(false);
 
   useEffect(() => {
-    if (!params) return;
-    // Trim whitespace from param keys in case browser mangled the bookmarklet
-    const entries = [...params.entries()];
-    const url = params.get("url") ?? entries.find(([k]) => k.trim() === "url")?.[1] ?? null;
-    const secret = params.get("secret") ?? entries.find(([k]) => k.trim() === "secret")?.[1] ?? null;
+    // Parse manually so Chrome bookmarklet mangling (spaces in param names) can't break us
+    const rawSearch = window.location.search.slice(1);
+    const paramMap: Record<string, string> = {};
+    rawSearch.split("&").forEach((pair) => {
+      const eq = pair.indexOf("=");
+      if (eq === -1) return;
+      const key = decodeURIComponent(pair.slice(0, eq)).trim();
+      const val = decodeURIComponent(pair.slice(eq + 1).replace(/\+/g, " "));
+      paramMap[key] = val;
+    });
+    const url = paramMap["url"] ?? null;
+    const secret = paramMap["secret"] ?? null;
     if (!url) { setState("error"); setMessage("No URL provided."); return; }
 
     fetch(`/api/ingest?secret=${encodeURIComponent(secret ?? "")}&url=${encodeURIComponent(url)}`)
