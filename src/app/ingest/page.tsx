@@ -16,8 +16,10 @@ function IngestContent() {
 
   useEffect(() => {
     if (!params) return;
-    const url = params.get("url");
-    const secret = params.get("secret");
+    // Trim whitespace from param keys in case browser mangled the bookmarklet
+    const entries = [...params.entries()];
+    const url = params.get("url") ?? entries.find(([k]) => k.trim() === "url")?.[1] ?? null;
+    const secret = params.get("secret") ?? entries.find(([k]) => k.trim() === "secret")?.[1] ?? null;
     if (!url) { setState("error"); setMessage("No URL provided."); return; }
 
     fetch(`/api/ingest?secret=${encodeURIComponent(secret ?? "")}&url=${encodeURIComponent(url)}`)
