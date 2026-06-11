@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
@@ -13,6 +15,7 @@ function IngestContent() {
   const [jdComplete, setJdComplete] = useState(false);
 
   useEffect(() => {
+    if (!params) return;
     const url = params.get("url");
     const secret = params.get("secret");
     if (!url) { setState("error"); setMessage("No URL provided."); return; }
