@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
-import { supabaseAdmin } from "@/lib/supabase-server";
 
 export async function POST(
   request: NextRequest,
@@ -33,21 +32,28 @@ export async function POST(
 ${text.trim()}
 `;
 
-  const path = `${params.id}.md`;
-  const { error: uploadError } = await supabaseAdmin.storage
-    .from("job-descriptions")
-    .upload(path, Buffer.from(markdown, "utf-8"), {
-      contentType: "text/markdown; charset=utf-8",
-      upsert: true,
-    });
-
-  if (uploadError) {
-    return NextResponse.json({ error: uploadError.message }, { status: 500 });
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!serviceKey || !supabaseUrl) {
+    return NextResponse.json({ error: "Storage not configured" }, { status: 500 });
   }
 
-  const { data: { publicUrl } } = supabaseAdmin.storage
-    .from("job-descriptions")
-    .getPublicUrl(path);
+  const path = `${params.id}.md`;
+  const uploadRes = await fetch(`${supabaseUrl}/storage/v1/object/job-descriptions/${path}`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${serviceKey}`,
+      "Content-Type": "text/markdown; charset=utf-8",
+      "x-upsert": "true",
+    },
+    body: markdown,
+  });
+
+  if (!uploadRes.ok) {
+    return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+  }
+
+  const publicUrl = `${supabaseUrl}/storage/v1/object/public/job-descriptions/${path}`;
 
   const { error: updateError } = await supabase
     .from("candidates")

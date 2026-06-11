@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { supabase } from "@/lib/supabase";
-import { supabaseAdmin } from "@/lib/supabase-server";
 
 export const maxDuration = 60;
 
@@ -42,16 +41,23 @@ ${pageText.trim()}
 }
 
 async function uploadJd(id: string, markdown: string): Promise<string | null> {
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!serviceKey || !supabaseUrl) return null;
+
   const path = `${id}.md`;
-  const { error } = await supabaseAdmin.storage
-    .from("job-descriptions")
-    .upload(path, Buffer.from(markdown, "utf-8"), {
-      contentType: "text/markdown; charset=utf-8",
-      upsert: true,
-    });
-  if (error) return null;
-  const { data } = supabaseAdmin.storage.from("job-descriptions").getPublicUrl(path);
-  return data.publicUrl;
+  const res = await fetch(`${supabaseUrl}/storage/v1/object/job-descriptions/${path}`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${serviceKey}`,
+      "Content-Type": "text/markdown; charset=utf-8",
+      "x-upsert": "true",
+    },
+    body: markdown,
+  });
+
+  if (!res.ok) return null;
+  return `${supabaseUrl}/storage/v1/object/public/job-descriptions/${path}`;
 }
 
 async function handleIngest(request: NextRequest) {
