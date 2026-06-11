@@ -70,11 +70,14 @@ async function handleIngest(request: NextRequest) {
   }
 
   let url: string | null = null;
+  let addedBy = "joel";
   if (request.method === "POST") {
     const body = await request.json().catch(() => null);
     url = body?.url ?? null;
+    if (body?.added_by) addedBy = body.added_by;
   } else {
     url = request.nextUrl.searchParams.get("url");
+    addedBy = request.nextUrl.searchParams.get("added_by") ?? "joel";
   }
   if (!url) return NextResponse.json({ error: "url required" }, { status: 400 });
 
@@ -193,7 +196,7 @@ ${pageText}`,
       pay_max: extracted.pay_max ?? null,
       company_info: extracted.company_info ?? {},
       found_date: today,
-      added_by: "joel",
+      added_by: addedBy,
       jd_storage_url: jdStorageUrl,
       jd_complete: jdComplete,
     }])
