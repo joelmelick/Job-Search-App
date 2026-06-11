@@ -111,18 +111,23 @@ export default function JobCard({ job, onUpdate, onDelete }: JobCardProps) {
           {/* Pay */}
           {pay && <div className="text-sm font-semibold text-green-700">{pay}</div>}
 
-          {/* Application type toggle */}
-          <button
-            onClick={() => onUpdate(job.id, { application_type: (isReferral ? "online" : "referral") as ApplicationType })}
-            title="Click to toggle referral / online"
-            className={`self-start text-xs px-2 py-0.5 rounded-full font-medium transition-colors ${
-              isReferral
-                ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
-                : "bg-sky-50 text-sky-600 hover:bg-sky-100"
-            }`}
-          >
-            {isReferral ? "🤝 Referral" : "🌐 Online"}
-          </button>
+          {/* Referral indicator */}
+          {isReferral ? (
+            <button
+              onClick={() => onUpdate(job.id, { application_type: "online" as ApplicationType })}
+              title="Click to remove referral tag"
+              className="self-start text-xs px-2 py-0.5 rounded-full font-medium bg-yellow-100 text-yellow-700 hover:bg-yellow-200 transition-colors"
+            >
+              🤝 Referral
+            </button>
+          ) : (
+            <button
+              onClick={() => onUpdate(job.id, { application_type: "referral" as ApplicationType })}
+              className="self-start text-xs text-gray-400 hover:text-yellow-600 transition-colors"
+            >
+              + referral
+            </button>
+          )}
 
           {/* Company insights */}
           {info.last_funding && (
