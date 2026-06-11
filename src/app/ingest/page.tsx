@@ -45,7 +45,7 @@ function IngestContent() {
         }
       })
       .catch(() => { setState("error"); setMessage("Could not reach job tracker."); });
-  }, [params]);
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-100 flex items-center justify-center p-6">
