@@ -33,8 +33,8 @@ function buildJdMarkdown(company: string, role: string, url: string, date: strin
 }
 
 async function uploadJd(id: string, markdown: string): Promise<{ url: string | null; error: string | null }> {
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
   if (!serviceKey) return { url: null, error: "SUPABASE_SERVICE_ROLE_KEY not set" };
   if (!supabaseUrl) return { url: null, error: "NEXT_PUBLIC_SUPABASE_URL not set" };
 
