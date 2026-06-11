@@ -7,6 +7,16 @@ export const maxDuration = 60;
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: CORS });
+}
+
 function isLoginWall(url: string, text: string): boolean {
   if (url.includes("linkedin.com")) return true;
   const lower = text.toLowerCase();
@@ -195,9 +205,13 @@ ${pageText}`,
 }
 
 export async function GET(request: NextRequest) {
-  return handleIngest(request);
+  const res = await handleIngest(request);
+  Object.entries(CORS).forEach(([k, v]) => res.headers.set(k, v));
+  return res;
 }
 
 export async function POST(request: NextRequest) {
-  return handleIngest(request);
+  const res = await handleIngest(request);
+  Object.entries(CORS).forEach(([k, v]) => res.headers.set(k, v));
+  return res;
 }
