@@ -29,15 +29,7 @@ function isLoginWall(url: string, text: string): boolean {
 }
 
 function buildJdMarkdown(company: string, role: string, url: string, date: string, pageText: string): string {
-  return `# ${company} — ${role}
-
-**URL:** ${url}
-**Captured:** ${date}
-
----
-
-${pageText.trim()}
-`;
+  return `# ${company} — ${role}\n\n**URL:** ${url}\n**Captured:** ${date}\n\n---\n\n${pageText.trim()}\n`;
 }
 
 async function uploadJd(id: string, markdown: string): Promise<string | null> {
@@ -46,18 +38,21 @@ async function uploadJd(id: string, markdown: string): Promise<string | null> {
   if (!serviceKey || !supabaseUrl) return null;
 
   const path = `${id}.md`;
-  const res = await fetch(`${supabaseUrl}/storage/v1/object/job-descriptions/${path}`, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${serviceKey}`,
-      "Content-Type": "text/markdown; charset=utf-8",
-      "x-upsert": "true",
-    },
-    body: markdown,
-  });
-
-  if (!res.ok) return null;
-  return `${supabaseUrl}/storage/v1/object/public/job-descriptions/${path}`;
+  try {
+    const res = await fetch(`${supabaseUrl}/storage/v1/object/job-descriptions/${path}`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${serviceKey}`,
+        "Content-Type": "text/markdown; charset=utf-8",
+        "x-upsert": "true",
+      },
+      body: markdown,
+    });
+    if (!res.ok) return null;
+    return `${supabaseUrl}/storage/v1/object/public/job-descriptions/${path}`;
+  } catch {
+    return null;
+  }
 }
 
 async function handleIngest(request: NextRequest) {
@@ -109,11 +104,12 @@ async function handleIngest(request: NextRequest) {
   const jdComplete = !isLoginWall(url, pageText);
 
   // Extract structured job data with Claude
-  const message = await anthropic.messages.create({
-    model: "claude-haiku-4-5-20251001",
-    max_tokens: 512,
-    messages: [
-      {
+  let message;
+  try {
+    message = await anthropic.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 512,
+      messages: [{
         role: "user",
         content: `Extract job posting details from the text below. Return ONLY a valid JSON object with exactly these fields:
 
@@ -139,9 +135,14 @@ remote_friendly, hybrid, onsite, publicly_traded, private, ai_platform, security
 Job posting URL: ${url}
 Job posting text:
 ${pageText}`,
-      },
-    ],
-  });
+      }],
+    });
+  } catch (e) {
+    return NextResponse.json(
+      { error: `Claude API error: ${e instanceof Error ? e.message : "unknown"}` },
+      { status: 500 }
+    );
+  }
 
   let extracted: Record<string, unknown>;
   try {
@@ -176,24 +177,22 @@ ${pageText}`,
 
   const { data, error } = await supabase
     .from("candidates")
-    .insert([
-      {
-        id,
-        company: extracted.company,
-        role: extracted.role,
-        url,
-        source: extracted.source ?? "other",
-        attributes: extracted.attributes ?? [],
-        pay_range: extracted.pay_range ?? "Pay not listed",
-        pay_min: extracted.pay_min ?? null,
-        pay_max: extracted.pay_max ?? null,
-        company_info: extracted.company_info ?? {},
-        found_date: today,
-        added_by: "joel",
-        jd_storage_url: jdStorageUrl,
-        jd_complete: jdComplete,
-      },
-    ])
+    .insert([{
+      id,
+      company: extracted.company,
+      role: extracted.role,
+      url,
+      source: extracted.source ?? "other",
+      attributes: extracted.attributes ?? [],
+      pay_range: extracted.pay_range ?? "Pay not listed",
+      pay_min: extracted.pay_min ?? null,
+      pay_max: extracted.pay_max ?? null,
+      company_info: extracted.company_info ?? {},
+      found_date: today,
+      added_by: "joel",
+      jd_storage_url: jdStorageUrl,
+      jd_complete: jdComplete,
+    }])
     .select()
     .single();
 
@@ -205,7 +204,7 @@ ${pageText}`,
   }
 
   return NextResponse.json(
-    { success: true, company: data.company, role: data.role, id: data.id, jd_complete: jdComplete },
+    { success: true, company: data.company, role: data.role, id: data.id, jd_complete: jdComplete, jd_stored: !!jdStorageUrl },
     { status: 201 }
   );
 }
