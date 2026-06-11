@@ -32,10 +32,11 @@ function buildJdMarkdown(company: string, role: string, url: string, date: strin
   return `# ${company} — ${role}\n\n**URL:** ${url}\n**Captured:** ${date}\n\n---\n\n${pageText.trim()}\n`;
 }
 
-async function uploadJd(id: string, markdown: string): Promise<string | null> {
+async function uploadJd(id: string, markdown: string): Promise<{ url: string | null; error: string | null }> {
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (!serviceKey || !supabaseUrl) return null;
+  if (!serviceKey) return { url: null, error: "SUPABASE_SERVICE_ROLE_KEY not set" };
+  if (!supabaseUrl) return { url: null, error: "NEXT_PUBLIC_SUPABASE_URL not set" };
 
   const path = `${id}.md`;
   try {
@@ -48,10 +49,13 @@ async function uploadJd(id: string, markdown: string): Promise<string | null> {
       },
       body: markdown,
     });
-    if (!res.ok) return null;
-    return `${supabaseUrl}/storage/v1/object/public/job-descriptions/${path}`;
-  } catch {
-    return null;
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      return { url: null, error: `Storage ${res.status}: ${body}` };
+    }
+    return { url: `${supabaseUrl}/storage/v1/object/public/job-descriptions/${path}`, error: null };
+  } catch (e) {
+    return { url: null, error: e instanceof Error ? e.message : "unknown" };
   }
 }
 
@@ -173,7 +177,7 @@ ${pageText}`,
     today,
     pageText
   );
-  const jdStorageUrl = await uploadJd(id, jdMarkdown);
+  const { url: jdStorageUrl, error: jdUploadError } = await uploadJd(id, jdMarkdown);
 
   const { data, error } = await supabase
     .from("candidates")
@@ -204,7 +208,7 @@ ${pageText}`,
   }
 
   return NextResponse.json(
-    { success: true, company: data.company, role: data.role, id: data.id, jd_complete: jdComplete, jd_stored: !!jdStorageUrl },
+    { success: true, company: data.company, role: data.role, id: data.id, jd_complete: jdComplete, jd_stored: !!jdStorageUrl, jd_error: jdUploadError },
     { status: 201 }
   );
 }
