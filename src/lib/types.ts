@@ -26,6 +26,7 @@ export interface Job {
   pay_source: PaySource;
   posting_status: PostingStatus;
   last_checked: string | null;
+  down_since: string | null;
   last_action: string | null;
   next_action: string | null;
   date_added: string;
@@ -69,6 +70,10 @@ export interface Candidate {
   promoted: boolean;
   dismissed: boolean;
   dismiss_reason: string | null;
+  dismissed_at: string | null;
+  posting_status: PostingStatus | null;
+  last_checked: string | null;
+  down_since: string | null;
   workflow_status: string;
   folder_path: string | null;
   storage_outreach_url: string | null;

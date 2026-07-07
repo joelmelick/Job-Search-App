@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 
+export const dynamic = "force-dynamic";
+
 const CLOSED_SIGNALS = [
   "job is no longer available",
   "position has been filled",
@@ -77,7 +79,7 @@ export async function GET(request: NextRequest) {
 
   const { data: jobs, error } = await supabase
     .from("jobs")
-    .select("id, job_url, posting_status")
+    .select("id, job_url, posting_status, status, down_since")
     .eq("pursuing", true)
     .neq("posting_status", "closed");
 
@@ -86,23 +88,41 @@ export async function GET(request: NextRequest) {
   }
 
   const today = new Date().toISOString().slice(0, 10);
+  const EARLY_STAGES = ["Research", "Docs Ready"];
+  const DISMISS_AFTER_DAYS = 4;
 
-  // Check up to 10 URLs in parallel
   const results = await Promise.all(
     (jobs ?? []).map(async (job) => {
       const live = await isJobLive(job.job_url);
-      const updates: Record<string, string> = { last_checked: today };
+      const updates: Record<string, string | boolean | null> = {
+        last_checked: today,
+      };
+      let archived = false;
 
       if (!live) {
+        const downSince = job.down_since ?? today;
         updates.posting_status = "down";
+        updates.down_since = downSince;
         updates.next_action = "⚠️ Posting removed — reassess";
+
+        const daysDown =
+          (Date.parse(today) - Date.parse(downSince)) / 86_400_000 + 1;
+        if (EARLY_STAGES.includes(job.status) && daysDown >= DISMISS_AFTER_DAYS) {
+          updates.pursuing = false;
+          updates.last_action = `Auto-archived ${today} — posting down ${DISMISS_AFTER_DAYS}+ days`;
+          archived = true;
+        }
+      } else {
+        updates.posting_status = "live";
+        updates.down_since = null;
       }
 
       await supabase.from("jobs").update(updates).eq("id", job.id);
-      return { id: job.id, live };
+      return { id: job.id, live, archived };
     })
   );
 
   const downed = results.filter((r) => !r.live).length;
-  return NextResponse.json({ checked: results.length, downed, date: today });
+  const archived = results.filter((r) => r.archived).length;
+  return NextResponse.json({ checked: results.length, downed, archived, date: today });
 }

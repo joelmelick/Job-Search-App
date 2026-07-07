@@ -18,7 +18,11 @@ export async function POST(
   // Mark as dismissed
   const { error: updateError } = await supabase
     .from("candidates")
-    .update({ dismissed: true, dismiss_reason: reason })
+    .update({
+      dismissed: true,
+      dismiss_reason: reason,
+      dismissed_at: new Date().toISOString(),
+    })
     .eq("id", params.id);
 
   if (updateError) {

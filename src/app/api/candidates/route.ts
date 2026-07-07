@@ -1,13 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 
-export async function GET() {
-  const { data, error } = await supabase
-    .from("candidates")
-    .select("*")
-    .eq("dismissed", false)
-    .eq("promoted", false)
-    .order("created_at", { ascending: false });
+export async function GET(request: NextRequest) {
+  const view = request.nextUrl.searchParams.get("view");
+
+  const query =
+    view === "dismissed"
+      ? supabase
+          .from("candidates")
+          .select("*")
+          .eq("dismissed", true)
+          .order("dismissed_at", { ascending: false, nullsFirst: false })
+      : supabase
+          .from("candidates")
+          .select("*")
+          .eq("dismissed", false)
+          .eq("promoted", false)
+          .or("posting_status.is.null,posting_status.neq.down")
+          .order("created_at", { ascending: false });
+
+  const { data, error } = await query;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
