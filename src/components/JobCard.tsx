@@ -219,7 +219,7 @@ export default function JobCard({ job, onUpdate, onDelete }: JobCardProps) {
         </div>
       </div>
 
-      {docsOpen && <DocModal job={job} onClose={() => setDocsOpen(false)} />}
+      {docsOpen && <DocModal doc={job} onClose={() => setDocsOpen(false)} />}
     </>
   );
 }

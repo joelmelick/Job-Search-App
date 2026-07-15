@@ -41,6 +41,15 @@ export async function POST(
     jd_storage_url: candidate.jd_storage_url ?? null,
     jd_complete: candidate.jd_complete ?? false,
     date_added: new Date().toISOString().slice(0, 10),
+    workflow_status: candidate.workflow_status ?? "pending",
+    // Carry generated doc content forward so the Docs modal works post-promotion
+    resume_html: candidate.resume_html ?? null,
+    cover_letter_text: candidate.cover_letter_text ?? null,
+    assessment_data: candidate.assessment_data ?? null,
+    interview_tips: candidate.interview_tips ?? null,
+    resume_pdf_b64: candidate.resume_pdf_b64 ?? null,
+    storage_outreach_url: candidate.storage_outreach_url ?? null,
+    outreach_text: candidate.outreach_text ?? null,
   };
 
   const { data: job, error: jobError } = await supabase

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Candidate } from "@/lib/types";
+import DocModal from "./DocModal";
 
 interface CandidateCardProps {
   candidate: Candidate;
@@ -26,6 +27,7 @@ export default function CandidateCard({
   onDismiss,
 }: CandidateCardProps) {
   const [showDismissModal, setShowDismissModal] = useState(false);
+  const [showDocsModal, setShowDocsModal] = useState(false);
   const [showJdModal, setShowJdModal] = useState(false);
   const [jdText, setJdText] = useState("");
   const [jdSaving, setJdSaving] = useState(false);
@@ -176,6 +178,16 @@ export default function CandidateCard({
           </button>
         </div>
 
+        {/* Generated docs */}
+        {candidate.workflow_status === "complete" && candidate.resume_html && (
+          <button
+            onClick={() => setShowDocsModal(true)}
+            className="w-full text-sm font-medium py-2 px-4 rounded-lg bg-slate-100 text-[#1F4E79] hover:bg-slate-200 transition-colors"
+          >
+            📄 View Docs
+          </button>
+        )}
+
         {/* Actions */}
         <div className="flex gap-2 pt-1">
           <button
@@ -296,6 +308,11 @@ export default function CandidateCard({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Docs modal */}
+      {showDocsModal && (
+        <DocModal doc={candidate} onClose={() => setShowDocsModal(false)} />
       )}
     </>
   );

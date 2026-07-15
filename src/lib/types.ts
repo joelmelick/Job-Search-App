@@ -46,6 +46,12 @@ export interface Job {
   storage_outreach_url: string | null;
   linkedin_contacts: object[];
   created_at: string;
+  resume_html: string | null;
+  cover_letter_text: string | null;
+  assessment_data: AssessmentData | null;
+  interview_tips: InterviewTip[] | null;
+  resume_pdf_b64: string | null;
+  outreach_text: string | null;
 }
 
 export interface CompanyInfo {
@@ -53,6 +59,33 @@ export interface CompanyInfo {
   ticker?: string;
   last_funding?: string;
   notes?: string;
+}
+
+export interface AssessmentData {
+  ats_score?: number;
+  keywords_present?: string[];
+  keywords_missing?: string[];
+  ats_improvements?: string[];
+  hm_lean?: string;
+  hm_compelling?: string;
+  hm_concerns?: string;
+  strongest_section?: string;
+  weakest_section?: string;
+  top_improvements?: string[];
+}
+
+export interface InterviewTip {
+  category: string;
+  tip: string;
+}
+
+/** Fields shared by Candidate and Job that power the Docs modal. */
+export interface DocFields {
+  resume_html: string | null;
+  cover_letter_text: string | null;
+  assessment_data: AssessmentData | null;
+  interview_tips: InterviewTip[] | null;
+  resume_pdf_b64: string | null;
 }
 
 export interface Candidate {
@@ -81,6 +114,12 @@ export interface Candidate {
   jd_storage_url: string | null;
   jd_complete: boolean;
   created_at: string;
+  resume_html: string | null;
+  cover_letter_text: string | null;
+  assessment_data: AssessmentData | null;
+  interview_tips: InterviewTip[] | null;
+  resume_pdf_b64: string | null;
+  outreach_text: string | null;
 }
 
 export interface Company {

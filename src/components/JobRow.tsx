@@ -253,7 +253,7 @@ export default function JobRow({ job, onUpdate, onDelete }: JobRowProps) {
             ⏳ Processing
           </span>
         )}
-        {docsOpen && <DocModal job={job} onClose={() => setDocsOpen(false)} />}
+        {docsOpen && <DocModal doc={job} onClose={() => setDocsOpen(false)} />}
       </td>
 
       {/* Actions */}
