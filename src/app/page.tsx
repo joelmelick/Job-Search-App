@@ -67,7 +67,7 @@ export default function HomePage() {
           <TabButton
             active={tab === "pipeline"}
             onClick={() => setTab("pipeline")}
-            badge={jobs.length}
+            badge={jobs.filter((j) => j.status !== "Passed").length}
           >
             Pipeline
           </TabButton>

@@ -82,16 +82,37 @@ export default function Pipeline({ initialJobs }: PipelineProps) {
     setAdding(false);
   };
 
-  const activeJobs = jobs.filter((j) => j.status !== "Passed");
-  const inProgress = jobs.filter((j) => ["Application Submitted", "Recruiter Screen", "HM Screen", "Final / Offer"].includes(j.status)).length;
-  const interviews = jobs.filter((j) => ["Recruiter Screen", "HM Screen"].includes(j.status)).length;
-  const offers = jobs.filter((j) => j.status === "Final / Offer").length;
+  // Bucket every non-Passed job into a column. Anything with an unrecognized
+  // status (e.g. a workflow_status value written to status by an agent) lands
+  // in Research rather than disappearing from the board.
+  const jobsByColumn = new Map<JobStatus, Job[]>(
+    COLUMNS.map((col) => [col.status, [] as Job[]])
+  );
+  for (const job of jobs) {
+    if (job.status === "Passed") continue;
+    const bucket = jobsByColumn.get(job.status) ?? jobsByColumn.get("Research")!;
+    bucket.push(job);
+  }
+
+  // Count from what's actually rendered, so the stat can't drift from the board
+  const activeCount = COLUMNS.reduce(
+    (sum, col) => sum + (jobsByColumn.get(col.status)?.length ?? 0),
+    0
+  );
+  const countIn = (statuses: JobStatus[]) =>
+    statuses.reduce(
+      (sum, status) => sum + (jobsByColumn.get(status)?.length ?? 0),
+      0
+    );
+  const inProgress = countIn(["Application Submitted", "Recruiter Screen", "HM Screen", "Final / Offer"]);
+  const interviews = countIn(["Recruiter Screen", "HM Screen"]);
+  const offers = countIn(["Final / Offer"]);
 
   return (
     <div>
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-        <StatCard label="Active Jobs" value={activeJobs.length} color="text-[#1F4E79]" />
+        <StatCard label="Active Jobs" value={activeCount} color="text-[#1F4E79]" />
         <StatCard label="In Progress" value={inProgress} color="text-amber-600" />
         <StatCard label="Interviews" value={interviews} color="text-orange-600" />
         <StatCard label="Offers" value={offers} color="text-green-600" />
@@ -100,7 +121,7 @@ export default function Pipeline({ initialJobs }: PipelineProps) {
       {/* Kanban board */}
       <div className="flex gap-4 overflow-x-auto pb-6" style={{ minHeight: "60vh" }}>
         {COLUMNS.map((col) => {
-          const colJobs = jobs.filter((j) => j.status === col.status);
+          const colJobs = jobsByColumn.get(col.status) ?? [];
           return (
             <div key={col.status} className="flex-shrink-0 w-72 flex flex-col">
               {/* Column header */}
