@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { Candidate } from "@/lib/types";
-import DocModal from "./DocModal";
+import DocModal, { Tab as DocTab } from "./DocModal";
+import ScoreBadge from "./ScoreBadge";
 
 interface CandidateCardProps {
   candidate: Candidate;
@@ -27,7 +28,7 @@ export default function CandidateCard({
   onDismiss,
 }: CandidateCardProps) {
   const [showDismissModal, setShowDismissModal] = useState(false);
-  const [showDocsModal, setShowDocsModal] = useState(false);
+  const [docsTab, setDocsTab] = useState<DocTab | null>(null);
   const [showJdModal, setShowJdModal] = useState(false);
   const [jdText, setJdText] = useState("");
   const [jdSaving, setJdSaving] = useState(false);
@@ -154,9 +155,15 @@ export default function CandidateCard({
           </div>
         )}
 
-        {/* Found date */}
-        <div className="text-xs text-gray-400">
-          Found: {candidate.found_date}
+        {/* Found date + assessment score */}
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs text-gray-400">
+            Found: {candidate.found_date}
+          </span>
+          <ScoreBadge
+            data={candidate.assessment_data}
+            onClick={() => setDocsTab("assessment")}
+          />
         </div>
 
         {/* JD status + paste button */}
@@ -181,7 +188,7 @@ export default function CandidateCard({
         {/* Generated docs */}
         {candidate.workflow_status === "complete" && candidate.resume_html && (
           <button
-            onClick={() => setShowDocsModal(true)}
+            onClick={() => setDocsTab("resume")}
             className="w-full text-sm font-medium py-2 px-4 rounded-lg bg-slate-100 text-[#1F4E79] hover:bg-slate-200 transition-colors"
           >
             📄 View Docs
@@ -311,8 +318,12 @@ export default function CandidateCard({
       )}
 
       {/* Docs modal */}
-      {showDocsModal && (
-        <DocModal doc={candidate} onClose={() => setShowDocsModal(false)} />
+      {docsTab && (
+        <DocModal
+          doc={candidate}
+          initialTab={docsTab}
+          onClose={() => setDocsTab(null)}
+        />
       )}
     </>
   );

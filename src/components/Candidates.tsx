@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Candidate, Job } from "@/lib/types";
 import CandidateCard from "./CandidateCard";
+import { atsScore } from "./ScoreBadge";
 
 interface CandidatesProps {
   initialCandidates: Candidate[];
@@ -10,8 +11,21 @@ interface CandidatesProps {
 }
 
 type View = "active" | "dismissed";
+type Sort = "score" | "newest" | "oldest";
+
+const SORT_LABELS: Record<Sort, string> = {
+  score: "Assessment score",
+  newest: "Date added (newest)",
+  oldest: "Date added (oldest)",
+};
 
 const AUTO_DISMISS_PREFIX = "Posting removed";
+
+/** found_date is the agent's discovery date; created_at is the reliable fallback. */
+function addedTime(c: Candidate): number {
+  const t = Date.parse(c.found_date ?? "");
+  return Number.isNaN(t) ? Date.parse(c.created_at ?? "") || 0 : t;
+}
 
 export default function Candidates({
   initialCandidates,
@@ -21,6 +35,7 @@ export default function Candidates({
   const [dismissed, setDismissed] = useState<Candidate[] | null>(null);
   const [view, setView] = useState<View>("active");
   const [filterAttr, setFilterAttr] = useState<string>("all");
+  const [sort, setSort] = useState<Sort>("newest");
   const [restoringId, setRestoringId] = useState<string | null>(null);
 
   const loadDismissed = async () => {
@@ -90,13 +105,29 @@ export default function Candidates({
     )
   ).sort();
 
-  const filtered =
+  const filtered = (
     filterAttr === "all"
       ? candidates
       : candidates.filter(
           (c) =>
             Array.isArray(c.attributes) && c.attributes.includes(filterAttr)
-        );
+        )
+  )
+    .slice()
+    .sort((a, b) => {
+      if (sort === "score") {
+        const sa = atsScore(a.assessment_data);
+        const sb = atsScore(b.assessment_data);
+        // Unscored candidates sink to the bottom rather than reading as zero
+        if (sa == null && sb == null) return addedTime(b) - addedTime(a);
+        if (sa == null) return 1;
+        if (sb == null) return -1;
+        return sb - sa || addedTime(b) - addedTime(a);
+      }
+      return sort === "newest"
+        ? addedTime(b) - addedTime(a)
+        : addedTime(a) - addedTime(b);
+    });
 
   return (
     <div>
@@ -141,6 +172,23 @@ export default function Candidates({
               Dismissed
             </button>
           </div>
+
+          {view === "active" && (
+            <label className="flex items-center gap-1.5 text-xs text-gray-500">
+              Sort
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value as Sort)}
+                className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white text-gray-700 cursor-pointer focus:outline-none focus:border-[#1F4E79]"
+              >
+                {(Object.keys(SORT_LABELS) as Sort[]).map((s) => (
+                  <option key={s} value={s}>
+                    {SORT_LABELS[s]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
 
           {view === "active" && allAttrs.length > 0 && (
             <div className="flex gap-2 flex-wrap">

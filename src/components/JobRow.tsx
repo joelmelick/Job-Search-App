@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { Job, JOB_STATUSES, JobStatus } from "@/lib/types";
-import DocModal from "./DocModal";
+import DocModal, { Tab as DocTab } from "./DocModal";
+import ScoreBadge from "./ScoreBadge";
 
 interface JobRowProps {
   job: Job;
@@ -100,7 +101,7 @@ export default function JobRow({ job, onUpdate, onDelete }: JobRowProps) {
   const [nextAction, setNextAction] = useState(job.next_action ?? "");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmArchive, setConfirmArchive] = useState(false);
-  const [docsOpen, setDocsOpen] = useState(false);
+  const [docsTab, setDocsTab] = useState<DocTab | null>(null);
 
   const info = job.company_info ?? {};
   const isPublic = info.public_or_private === "public";
@@ -241,19 +242,28 @@ export default function JobRow({ job, onUpdate, onDelete }: JobRowProps) {
 
       {/* Document links */}
       <td className="py-3 px-4">
-        {job.workflow_status === "complete" ? (
-          <button
-            onClick={() => setDocsOpen(true)}
-            className="text-xs font-medium px-3 py-1.5 rounded-lg bg-[#1F4E79] text-white hover:bg-[#2563a8] transition-colors whitespace-nowrap"
-          >
-            Docs
-          </button>
-        ) : (
-          <span className="inline-flex items-center gap-1 text-xs text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full whitespace-nowrap">
-            ⏳ Processing
-          </span>
+        <div className="flex items-center gap-2">
+          {job.workflow_status === "complete" ? (
+            <button
+              onClick={() => setDocsTab("resume")}
+              className="text-xs font-medium px-3 py-1.5 rounded-lg bg-[#1F4E79] text-white hover:bg-[#2563a8] transition-colors whitespace-nowrap"
+            >
+              Docs
+            </button>
+          ) : (
+            <span className="inline-flex items-center gap-1 text-xs text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full whitespace-nowrap">
+              ⏳ Processing
+            </span>
+          )}
+          <ScoreBadge
+            data={job.assessment_data}
+            onClick={() => setDocsTab("assessment")}
+            compact
+          />
+        </div>
+        {docsTab && (
+          <DocModal doc={job} initialTab={docsTab} onClose={() => setDocsTab(null)} />
         )}
-        {docsOpen && <DocModal doc={job} onClose={() => setDocsOpen(false)} />}
       </td>
 
       {/* Actions */}

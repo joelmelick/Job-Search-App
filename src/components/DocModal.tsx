@@ -6,7 +6,7 @@ import { AssessmentData, InterviewTip } from "@/lib/types";
 
 marked.use({ gfm: true, breaks: true });
 
-type Tab = "resume" | "cover" | "assessment" | "tips" | "jd" | "outreach";
+export type Tab = "resume" | "cover" | "assessment" | "tips" | "jd" | "outreach";
 
 /** Minimal shape the modal needs — satisfied by both Job and Candidate. */
 export interface DocSource {
@@ -26,6 +26,8 @@ export interface DocSource {
 interface DocModalProps {
   doc: DocSource;
   onClose: () => void;
+  /** Open straight to this tab (e.g. from a score badge). Falls back if unavailable. */
+  initialTab?: Tab;
 }
 
 function useMarkdownContent(url: string | null | undefined) {
@@ -321,7 +323,7 @@ function TipsPane({ tips }: { tips: InterviewTip[] | null }) {
   );
 }
 
-export default function DocModal({ doc, onClose }: DocModalProps) {
+export default function DocModal({ doc, onClose, initialTab }: DocModalProps) {
   const jd = useMarkdownContent(doc.jd_storage_url);
   // Prefer inline outreach_text from the DB; only fetch a URL if no inline text.
   const outreach = useMarkdownContent(doc.outreach_text ? null : doc.storage_outreach_url);
@@ -337,7 +339,8 @@ export default function DocModal({ doc, onClose }: DocModalProps) {
   ], [doc, hasOutreach]);
 
   const firstAvailable = TABS.find((t) => t.available)?.id ?? "resume";
-  const [tab, setTab] = useState<Tab>(firstAvailable);
+  const requestedTab = TABS.find((t) => t.id === initialTab && t.available)?.id;
+  const [tab, setTab] = useState<Tab>(requestedTab ?? firstAvailable);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };

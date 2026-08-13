@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { Job, JobStatus, JOB_STATUSES, ApplicationType } from "@/lib/types";
-import DocModal from "./DocModal";
+import DocModal, { Tab as DocTab } from "./DocModal";
+import ScoreBadge from "./ScoreBadge";
 
 interface JobCardProps {
   job: Job;
@@ -57,7 +58,7 @@ function WorkflowBadge({ status }: { status: string }) {
 export default function JobCard({ job, onUpdate, onDelete }: JobCardProps) {
   const [lastAction, setLastAction] = useState(job.last_action ?? "");
   const [nextAction, setNextAction] = useState(job.next_action ?? "");
-  const [docsOpen, setDocsOpen] = useState(false);
+  const [docsTab, setDocsTab] = useState<DocTab | null>(null);
   const [confirmArchive, setConfirmArchive] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -170,6 +171,11 @@ export default function JobCard({ job, onUpdate, onDelete }: JobCardProps) {
         <div className="px-4 pb-3 flex items-center justify-between gap-2 border-t border-gray-50 pt-2.5">
           <div className="flex items-center gap-1.5 flex-wrap">
             <WorkflowBadge status={job.workflow_status} />
+            <ScoreBadge
+              data={job.assessment_data}
+              onClick={() => setDocsTab("assessment")}
+              compact
+            />
             {job.jd_storage_url && (
               <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${job.jd_complete ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"}`}>
                 {job.jd_complete ? "📄 JD" : "📄 Partial"}
@@ -179,7 +185,7 @@ export default function JobCard({ job, onUpdate, onDelete }: JobCardProps) {
           <div className="flex items-center gap-2">
             {job.workflow_status === "complete" && (
               <button
-                onClick={() => setDocsOpen(true)}
+                onClick={() => setDocsTab("resume")}
                 className="text-xs font-medium px-2.5 py-1 rounded-lg bg-[#1F4E79] text-white hover:bg-[#2563a8] transition-colors"
               >
                 Docs
@@ -219,7 +225,9 @@ export default function JobCard({ job, onUpdate, onDelete }: JobCardProps) {
         </div>
       </div>
 
-      {docsOpen && <DocModal doc={job} onClose={() => setDocsOpen(false)} />}
+      {docsTab && (
+        <DocModal doc={job} initialTab={docsTab} onClose={() => setDocsTab(null)} />
+      )}
     </>
   );
 }
