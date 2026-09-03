@@ -21,9 +21,10 @@ export async function POST(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Remove auto-dismissal entries from the log so the finder agent
-  // doesn't learn from a dismissal that was reversed
-  await supabase.from("dismissals").delete().eq("candidate_id", params.id);
+  // `dismissals` is an append-only audit log and DELETE is revoked for this key,
+  // so the historical entry stays. Restoring the candidate clears `dismissed`
+  // above, and the finder agent should ignore any dismissals row whose candidate
+  // is no longer dismissed rather than relying on the row being removed here.
 
   return NextResponse.json({ candidate: data });
 }

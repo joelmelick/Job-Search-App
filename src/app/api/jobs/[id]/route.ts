@@ -21,11 +21,22 @@ export async function PATCH(
   return NextResponse.json(data);
 }
 
+// Soft archive instead of a hard delete.
+// The board queries jobs with pursuing=true, so flipping this hides the row
+// while preserving the resume, cover letter, assessment, and interview tips.
+// Hard DELETE is intentionally revoked at the database level for this key.
 export async function DELETE(
   _request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { error } = await supabase.from("jobs").delete().eq("id", params.id);
+  const { error } = await supabase
+    .from("jobs")
+    .update({
+      pursuing: false,
+      status: "Archived",
+      last_action: `Archived ${new Date().toISOString().slice(0, 10)}`,
+    })
+    .eq("id", params.id);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
