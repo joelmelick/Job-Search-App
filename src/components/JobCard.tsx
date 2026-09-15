@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Job, JobStatus, JOB_STATUSES, ApplicationType } from "@/lib/types";
+import { Job, JobStatus, JOB_STATUSES, ApplicationType, isHiddenStatus } from "@/lib/types";
+import { normalizeCompanyInfo } from "@/lib/companyInfo";
 import DocModal, { Tab as DocTab } from "./DocModal";
 import ScoreBadge from "./ScoreBadge";
 
@@ -62,8 +63,8 @@ export default function JobCard({ job, onUpdate, onDelete }: JobCardProps) {
   const [confirmArchive, setConfirmArchive] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const info = job.company_info ?? {};
-  const isPublic = info.public_or_private === "public";
+  const info = normalizeCompanyInfo(job.company_info);
+  const isPublic = info.ownership === "public";
   const isReferral = job.application_type === "referral";
 
   const handleBlur = (field: "last_action" | "next_action", value: string) => {
@@ -79,7 +80,7 @@ export default function JobCard({ job, onUpdate, onDelete }: JobCardProps) {
   };
 
   const pay = formatPay();
-  const ACTIVE_STATUSES = JOB_STATUSES.filter((s) => s !== "Passed");
+  const ACTIVE_STATUSES = JOB_STATUSES.filter((s) => !isHiddenStatus(s));
 
   return (
     <>
@@ -91,7 +92,7 @@ export default function JobCard({ job, onUpdate, onDelete }: JobCardProps) {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="font-bold text-[#1F4E79] text-sm">{job.company}</span>
-                {info.public_or_private && (
+                {info.ownership && (
                   <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${isPublic ? "bg-blue-100 text-blue-700" : "bg-purple-100 text-purple-700"}`}>
                     {isPublic ? "Public" : "Private"}{isPublic && info.ticker ? ` · ${info.ticker}` : ""}
                   </span>
@@ -131,11 +132,11 @@ export default function JobCard({ job, onUpdate, onDelete }: JobCardProps) {
           )}
 
           {/* Company insights */}
-          {info.last_funding && (
-            <div className="text-xs text-gray-500 bg-gray-50 rounded-lg px-2.5 py-1.5 leading-snug">{info.last_funding}</div>
+          {info.funding && (
+            <div className="text-xs text-gray-500 bg-gray-50 rounded-lg px-2.5 py-1.5 leading-snug">{info.funding}</div>
           )}
-          {info.notes && (
-            <p className="text-xs text-gray-400 italic leading-snug">{info.notes}</p>
+          {info.overview && (
+            <p className="text-xs text-gray-400 italic leading-snug">{info.overview}</p>
           )}
 
           {/* Actions */}
@@ -220,6 +221,7 @@ export default function JobCard({ job, onUpdate, onDelete }: JobCardProps) {
             {ACTIVE_STATUSES.map((s) => (
               <option key={s} value={s}>{s}</option>
             ))}
+            <option value="Rejected">Rejected</option>
             <option value="Passed">Passed / Closed</option>
           </select>
         </div>

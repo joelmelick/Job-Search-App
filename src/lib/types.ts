@@ -6,6 +6,7 @@ export type JobStatus =
   | "Recruiter Screen"
   | "HM Screen"
   | "Final / Offer"
+  | "Rejected"
   | "Passed";
 
 export type ApplicationType = "online" | "referral";
@@ -149,8 +150,16 @@ export const JOB_STATUSES: JobStatus[] = [
   "Recruiter Screen",
   "HM Screen",
   "Final / Offer",
+  "Rejected",
   "Passed",
 ];
+
+/** Closed-out statuses: kept in the database but never shown on the board or counted. */
+export const HIDDEN_STATUSES: JobStatus[] = ["Rejected", "Passed"];
+
+export function isHiddenStatus(status: string): boolean {
+  return (HIDDEN_STATUSES as string[]).includes(status);
+}
 
 export const STATUS_COLORS: Record<JobStatus, string> = {
   Research: "bg-gray-100 text-gray-700",
@@ -160,5 +169,6 @@ export const STATUS_COLORS: Record<JobStatus, string> = {
   "Recruiter Screen": "bg-orange-100 text-orange-700",
   "HM Screen": "bg-rose-100 text-rose-700",
   "Final / Offer": "bg-green-100 text-green-700",
+  Rejected: "bg-red-200 text-red-800",
   Passed: "bg-red-100 text-red-700",
 };

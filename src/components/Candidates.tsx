@@ -1,14 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState, Dispatch, SetStateAction } from "react";
 import { Candidate, Job } from "@/lib/types";
 import CandidateCard from "./CandidateCard";
 import { atsScore } from "./ScoreBadge";
 
 interface CandidatesProps {
-  initialCandidates: Candidate[];
+  candidates: Candidate[];
+  onCandidatesChange: Dispatch<SetStateAction<Candidate[]>>;
   onPromoted: (job: Job) => void;
 }
+
+type Notice = { tone: "success" | "error"; text: string };
 
 type View = "active" | "dismissed";
 type Sort = "score" | "newest" | "oldest";
@@ -28,15 +31,26 @@ function addedTime(c: Candidate): number {
 }
 
 export default function Candidates({
-  initialCandidates,
+  candidates,
+  onCandidatesChange: setCandidates,
   onPromoted,
 }: CandidatesProps) {
-  const [candidates, setCandidates] = useState<Candidate[]>(initialCandidates);
+  const [notice, setNotice] = useState<Notice | null>(null);
   const [dismissed, setDismissed] = useState<Candidate[] | null>(null);
   const [view, setView] = useState<View>("active");
   const [filterAttr, setFilterAttr] = useState<string>("all");
   const [sort, setSort] = useState<Sort>("newest");
   const [restoringId, setRestoringId] = useState<string | null>(null);
+
+  // Auto-hide the promote confirmation; errors linger a bit longer
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(
+      () => setNotice(null),
+      notice.tone === "error" ? 8000 : 4000
+    );
+    return () => clearTimeout(timer);
+  }, [notice]);
 
   const loadDismissed = async () => {
     const res = await fetch("/api/candidates?view=dismissed");
@@ -49,6 +63,7 @@ export default function Candidates({
   };
 
   const handlePromote = async (id: string) => {
+    const company = candidates.find((c) => c.id === id)?.company ?? "Candidate";
     const res = await fetch(`/api/candidates/${id}/promote`, {
       method: "POST",
     });
@@ -56,6 +71,13 @@ export default function Candidates({
       const { job } = await res.json();
       setCandidates((prev) => prev.filter((c) => c.id !== id));
       onPromoted(job);
+      setNotice({ tone: "success", text: `${company} promoted to Pipeline` });
+    } else {
+      const body = await res.json().catch(() => null);
+      setNotice({
+        tone: "error",
+        text: `Couldn't promote ${company}${body?.error ? `: ${body.error}` : ""}`,
+      });
     }
   };
 
@@ -314,6 +336,21 @@ export default function Candidates({
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Promote confirmation / error */}
+      {notice && (
+        <div
+          role="status"
+          className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-40 text-sm font-medium px-4 py-2.5 rounded-lg shadow-lg ${
+            notice.tone === "success"
+              ? "bg-[#1F4E79] text-white"
+              : "bg-red-600 text-white"
+          }`}
+        >
+          {notice.tone === "success" ? "✓ " : "⚠ "}
+          {notice.text}
         </div>
       )}
     </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Job, Candidate } from "@/lib/types";
+import { Job, Candidate, isHiddenStatus } from "@/lib/types";
 import Pipeline from "@/components/Pipeline";
 import Candidates from "@/components/Candidates";
 
@@ -9,6 +9,9 @@ type Tab = "pipeline" | "candidates";
 
 export default function HomePage() {
   const [tab, setTab] = useState<Tab>("pipeline");
+  // Both lists live here (not inside each tab) so a change made on one tab —
+  // promoting, dismissing, archiving — is reflected everywhere, including the
+  // tab badges, without a reload.
   const [jobs, setJobs] = useState<Job[]>([]);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,9 +42,9 @@ export default function HomePage() {
     loadData();
   }, []);
 
+  // Stay on the Candidates tab after promoting; the job just joins the pipeline.
   const handlePromoted = (newJob: Job) => {
     setJobs((prev) => [newJob, ...prev]);
-    setTab("pipeline");
   };
 
   return (
@@ -67,7 +70,7 @@ export default function HomePage() {
           <TabButton
             active={tab === "pipeline"}
             onClick={() => setTab("pipeline")}
-            badge={jobs.filter((j) => j.status !== "Passed").length}
+            badge={jobs.filter((j) => !isHiddenStatus(j.status)).length}
           >
             Pipeline
           </TabButton>
@@ -122,11 +125,12 @@ export default function HomePage() {
         {!loading && !error && (
           <>
             {tab === "pipeline" && (
-              <Pipeline initialJobs={jobs} />
+              <Pipeline jobs={jobs} onJobsChange={setJobs} />
             )}
             {tab === "candidates" && (
               <Candidates
-                initialCandidates={candidates}
+                candidates={candidates}
+                onCandidatesChange={setCandidates}
                 onPromoted={handlePromoted}
               />
             )}

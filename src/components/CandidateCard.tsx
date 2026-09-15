@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Candidate } from "@/lib/types";
+import { normalizeCompanyInfo } from "@/lib/companyInfo";
 import DocModal, { Tab as DocTab } from "./DocModal";
 import ScoreBadge from "./ScoreBadge";
 
@@ -56,8 +57,8 @@ export default function CandidateCard({
     setJdSaving(false);
   };
 
-  const info = candidate.company_info ?? {};
-  const isPublic = info.public_or_private === "public";
+  const info = normalizeCompanyInfo(candidate.company_info);
+  const isPublic = info.ownership === "public";
   const attrs = Array.isArray(candidate.attributes) ? candidate.attributes : [];
 
   const handlePromote = async () => {
@@ -91,16 +92,18 @@ export default function CandidateCard({
               <h3 className="font-bold text-[#1F4E79] text-base">
                 {candidate.company}
               </h3>
-              <span
-                className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                  isPublic
-                    ? "bg-blue-100 text-blue-700"
-                    : "bg-purple-100 text-purple-700"
-                }`}
-              >
-                {isPublic ? "Public" : "Private"}
-                {isPublic && info.ticker ? ` · ${info.ticker}` : ""}
-              </span>
+              {info.ownership && (
+                <span
+                  className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                    isPublic
+                      ? "bg-blue-100 text-blue-700"
+                      : "bg-purple-100 text-purple-700"
+                  }`}
+                >
+                  {isPublic ? "Public" : "Private"}
+                  {isPublic && info.ticker ? ` · ${info.ticker}` : ""}
+                </span>
+              )}
               <span className="text-xs text-gray-400 capitalize">
                 {candidate.source}
               </span>
@@ -130,15 +133,16 @@ export default function CandidateCard({
         )}
 
         {/* Funding / company info */}
-        {info.last_funding && (
+        {info.funding && (
           <div className="text-xs text-gray-600 bg-gray-50 rounded-lg px-3 py-2">
             <span className="font-medium text-gray-700">Funding: </span>
-            {info.last_funding}
+            {info.funding}
           </div>
         )}
 
-        {info.notes && (
-          <p className="text-xs text-gray-500 italic">{info.notes}</p>
+        {/* Company + role overview */}
+        {info.overview && (
+          <p className="text-xs text-gray-500 italic leading-snug">{info.overview}</p>
         )}
 
         {/* Attributes */}

@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { Job, JobStatus } from "@/lib/types";
+import { useState, Dispatch, SetStateAction } from "react";
+import { Job, JobStatus, isHiddenStatus } from "@/lib/types";
 import JobCard from "./JobCard";
 
 interface PipelineProps {
-  initialJobs: Job[];
+  jobs: Job[];
+  onJobsChange: Dispatch<SetStateAction<Job[]>>;
 }
 
 interface KanbanColumn {
@@ -26,8 +27,7 @@ const COLUMNS: KanbanColumn[] = [
   { status: "Final / Offer",        label: "Final / Offer",        headerBg: "bg-green-100",  headerText: "text-green-800",  dotColor: "bg-green-400"  },
 ];
 
-export default function Pipeline({ initialJobs }: PipelineProps) {
-  const [jobs, setJobs] = useState<Job[]>(initialJobs);
+export default function Pipeline({ jobs, onJobsChange: setJobs }: PipelineProps) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newCompany, setNewCompany] = useState("");
   const [newRole, setNewRole] = useState("");
@@ -82,14 +82,14 @@ export default function Pipeline({ initialJobs }: PipelineProps) {
     setAdding(false);
   };
 
-  // Bucket every non-Passed job into a column. Anything with an unrecognized
-  // status (e.g. a workflow_status value written to status by an agent) lands
-  // in Research rather than disappearing from the board.
+  // Bucket every job into a column, skipping closed-out ones (Rejected, Passed).
+  // Anything with an unrecognized status (e.g. a workflow_status value written
+  // to status by an agent) lands in Research rather than disappearing.
   const jobsByColumn = new Map<JobStatus, Job[]>(
     COLUMNS.map((col) => [col.status, [] as Job[]])
   );
   for (const job of jobs) {
-    if (job.status === "Passed") continue;
+    if (isHiddenStatus(job.status)) continue;
     const bucket = jobsByColumn.get(job.status) ?? jobsByColumn.get("Research")!;
     bucket.push(job);
   }
