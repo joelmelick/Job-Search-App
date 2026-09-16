@@ -19,9 +19,9 @@ interface KanbanColumn {
 
 const COLUMNS: KanbanColumn[] = [
   { status: "Research",             label: "Research",             headerBg: "bg-gray-100",   headerText: "text-gray-700",   dotColor: "bg-gray-400"   },
-  { status: "Docs Ready",           label: "Docs Ready",           headerBg: "bg-blue-100",   headerText: "text-blue-800",   dotColor: "bg-blue-400"   },
-  { status: "Waiting on Referral",  label: "Waiting on Referral",  headerBg: "bg-purple-100", headerText: "text-purple-800", dotColor: "bg-purple-400" },
-  { status: "Application Submitted",label: "Application Submitted",headerBg: "bg-amber-100",  headerText: "text-amber-800",  dotColor: "bg-amber-400"  },
+  { status: "Cold Apply",           label: "Cold Apply",           headerBg: "bg-amber-100",  headerText: "text-amber-800",  dotColor: "bg-amber-400"  },
+  { status: "Applied with LinkedIn Outreach", label: "Applied with LinkedIn Outreach", headerBg: "bg-sky-100", headerText: "text-sky-800", dotColor: "bg-sky-400" },
+  { status: "Referred",             label: "Referred",             headerBg: "bg-purple-100", headerText: "text-purple-800", dotColor: "bg-purple-400" },
   { status: "Recruiter Screen",     label: "Recruiter Screen",     headerBg: "bg-orange-100", headerText: "text-orange-800", dotColor: "bg-orange-400" },
   { status: "HM Screen",            label: "HM Screen",            headerBg: "bg-rose-100",   headerText: "text-rose-800",   dotColor: "bg-rose-400"   },
   { status: "Final / Offer",        label: "Final / Offer",        headerBg: "bg-green-100",  headerText: "text-green-800",  dotColor: "bg-green-400"  },
@@ -104,7 +104,8 @@ export default function Pipeline({ jobs, onJobsChange: setJobs }: PipelineProps)
       (sum, status) => sum + (jobsByColumn.get(status)?.length ?? 0),
       0
     );
-  const inProgress = countIn(["Application Submitted", "Recruiter Screen", "HM Screen", "Final / Offer"]);
+  // Everything past Research counts as an active application
+  const inProgress = countIn(["Cold Apply", "Applied with LinkedIn Outreach", "Referred", "Recruiter Screen", "HM Screen", "Final / Offer"]);
   const interviews = countIn(["Recruiter Screen", "HM Screen"]);
   const offers = countIn(["Final / Offer"]);
 

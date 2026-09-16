@@ -215,7 +215,16 @@ export default function JobCard({ job, onUpdate, onDelete }: JobCardProps) {
         <div className="px-3 pb-3">
           <select
             value={job.status}
-            onChange={(e) => onUpdate(job.id, { status: e.target.value as JobStatus })}
+            onChange={(e) => {
+              const status = e.target.value as JobStatus;
+              // Being referred makes it a referral; keep the tag in sync
+              onUpdate(
+                job.id,
+                status === "Referred" && !isReferral
+                  ? { status, application_type: "referral" }
+                  : { status }
+              );
+            }}
             className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-gray-50 text-gray-600 cursor-pointer focus:outline-none focus:border-[#1F4E79]"
           >
             {ACTIVE_STATUSES.map((s) => (

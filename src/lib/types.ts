@@ -1,8 +1,8 @@
 export type JobStatus =
   | "Research"
-  | "Docs Ready"
-  | "Waiting on Referral"
-  | "Application Submitted"
+  | "Cold Apply"
+  | "Applied with LinkedIn Outreach"
+  | "Referred"
   | "Recruiter Screen"
   | "HM Screen"
   | "Final / Offer"
@@ -142,11 +142,15 @@ export interface Dismissal {
   dismissed_at: string;
 }
 
+/**
+ * Pipeline stages in order. Whether a job came through a referral is tracked
+ * separately in `application_type`, so it stays visible at every stage.
+ */
 export const JOB_STATUSES: JobStatus[] = [
   "Research",
-  "Docs Ready",
-  "Waiting on Referral",
-  "Application Submitted",
+  "Cold Apply",
+  "Applied with LinkedIn Outreach",
+  "Referred",
   "Recruiter Screen",
   "HM Screen",
   "Final / Offer",
@@ -163,9 +167,9 @@ export function isHiddenStatus(status: string): boolean {
 
 export const STATUS_COLORS: Record<JobStatus, string> = {
   Research: "bg-gray-100 text-gray-700",
-  "Docs Ready": "bg-blue-100 text-blue-700",
-  "Waiting on Referral": "bg-purple-100 text-purple-700",
-  "Application Submitted": "bg-amber-100 text-amber-700",
+  "Cold Apply": "bg-amber-100 text-amber-700",
+  "Applied with LinkedIn Outreach": "bg-sky-100 text-sky-700",
+  Referred: "bg-purple-100 text-purple-700",
   "Recruiter Screen": "bg-orange-100 text-orange-700",
   "HM Screen": "bg-rose-100 text-rose-700",
   "Final / Offer": "bg-green-100 text-green-700",

@@ -88,7 +88,8 @@ export async function GET(request: NextRequest) {
   }
 
   const today = new Date().toISOString().slice(0, 10);
-  const EARLY_STAGES = ["Research", "Docs Ready"];
+  // Only auto-archive jobs that haven't been applied to yet
+  const EARLY_STAGES = ["Research"];
   const DISMISS_AFTER_DAYS = 4;
 
   const results = await Promise.all(
