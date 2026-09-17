@@ -16,17 +16,22 @@ export async function POST(
     return NextResponse.json({ error: "Candidate not found" }, { status: 404 });
   }
 
-  // Build new job ID: company-slug + today's date
+  // Build new job ID: company + role + today's date. The role is part of the id
+  // so two different roles at the same company can be promoted the same day.
   const today = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-  const companySlug = candidate.company
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-  const jobId = `${companySlug}-${today}`;
+  const slug = (value: string, maxLength: number) =>
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, maxLength)
+      .replace(/-$/, "");
+  const baseId = [slug(candidate.company, 40), slug(candidate.role ?? "", 40), today]
+    .filter(Boolean)
+    .join("-");
 
   // Insert into jobs
   const newJob = {
-    id: jobId,
     company: candidate.company,
     role: candidate.role,
     job_url: candidate.url,
@@ -52,14 +57,34 @@ export async function POST(
     outreach_text: candidate.outreach_text ?? null,
   };
 
-  const { data: job, error: jobError } = await supabase
-    .from("jobs")
-    .insert([newJob])
-    .select()
-    .single();
+  // If the id is somehow still taken (same company, same role, same day), add a
+  // numeric suffix rather than failing the promote.
+  let job = null;
+  let jobError = null;
 
-  if (jobError) {
-    return NextResponse.json({ error: jobError.message }, { status: 500 });
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    const id = attempt === 1 ? baseId : `${baseId}-${attempt}`;
+    const result = await supabase
+      .from("jobs")
+      .insert([{ ...newJob, id }])
+      .select()
+      .single();
+
+    if (!result.error) {
+      job = result.data;
+      jobError = null;
+      break;
+    }
+
+    jobError = result.error;
+    if (result.error.code !== "23505") break; // not a duplicate id — real failure
+  }
+
+  if (!job) {
+    return NextResponse.json(
+      { error: jobError?.message ?? "Could not create job" },
+      { status: 500 }
+    );
   }
 
   // Mark candidate as promoted
