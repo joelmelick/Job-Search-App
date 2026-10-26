@@ -5,6 +5,7 @@ import { Candidate } from "@/lib/types";
 import { normalizeCompanyInfo } from "@/lib/companyInfo";
 import DocModal, { Tab as DocTab } from "./DocModal";
 import ScoreBadge from "./ScoreBadge";
+import ReferralLinks from "./ReferralLinks";
 
 interface CandidateCardProps {
   candidate: Candidate;
@@ -169,6 +170,8 @@ export default function CandidateCard({
             onClick={() => setDocsTab("assessment")}
           />
         </div>
+
+        <ReferralLinks company={candidate.company} />
 
         {/* JD status + paste button */}
         <div className="flex items-center gap-2">

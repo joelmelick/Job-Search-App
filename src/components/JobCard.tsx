@@ -5,6 +5,7 @@ import { Job, JobStatus, JOB_STATUSES, ApplicationType, isHiddenStatus } from "@
 import { normalizeCompanyInfo } from "@/lib/companyInfo";
 import DocModal, { Tab as DocTab } from "./DocModal";
 import ScoreBadge from "./ScoreBadge";
+import ReferralLinks from "./ReferralLinks";
 
 interface JobCardProps {
   job: Job;
@@ -138,6 +139,8 @@ export default function JobCard({ job, onUpdate, onDelete }: JobCardProps) {
           {info.overview && (
             <p className="text-xs text-gray-400 italic leading-snug">{info.overview}</p>
           )}
+
+          <ReferralLinks company={job.company} />
 
           {/* Actions */}
           <div className="space-y-1">
