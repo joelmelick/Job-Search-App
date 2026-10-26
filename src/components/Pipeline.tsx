@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, Dispatch, SetStateAction } from "react";
+import { useEffect, useState, Dispatch, SetStateAction } from "react";
 import { Job, JobStatus, isHiddenStatus } from "@/lib/types";
 import JobCard from "./JobCard";
+import { atsScore } from "./ScoreBadge";
 
 interface PipelineProps {
   jobs: Job[];
@@ -27,12 +28,42 @@ const COLUMNS: KanbanColumn[] = [
   { status: "Final / Offer",        label: "Final / Offer",        headerBg: "bg-green-100",  headerText: "text-green-800",  dotColor: "bg-green-400"  },
 ];
 
+type Sort = "ranking" | "newest" | "oldest" | "score";
+
+const SORT_LABELS: Record<Sort, string> = {
+  ranking: "Ranking (stars)",
+  newest: "Date added (newest)",
+  oldest: "Date added (oldest)",
+  score: "Assessment score",
+};
+
+type Notice = { tone: "success" | "error"; text: string };
+
+/** date_added is the tracked add date; created_at is the reliable fallback. */
+function addedTime(job: Job): number {
+  const t = Date.parse(job.date_added ?? "");
+  return Number.isNaN(t) ? Date.parse(job.created_at ?? "") || 0 : t;
+}
+
 export default function Pipeline({ jobs, onJobsChange: setJobs }: PipelineProps) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newCompany, setNewCompany] = useState("");
   const [newRole, setNewRole] = useState("");
   const [newUrl, setNewUrl] = useState("");
   const [adding, setAdding] = useState(false);
+  const [sort, setSort] = useState<Sort>("ranking");
+  const [confirmCloseDown, setConfirmCloseDown] = useState(false);
+  const [closingDown, setClosingDown] = useState(false);
+  const [notice, setNotice] = useState<Notice | null>(null);
+
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(
+      () => setNotice(null),
+      notice.tone === "error" ? 8000 : 4000
+    );
+    return () => clearTimeout(timer);
+  }, [notice]);
 
   const handleUpdate = async (id: string, updates: Partial<Job>) => {
     const res = await fetch(`/api/jobs/${id}`, {
@@ -82,6 +113,22 @@ export default function Pipeline({ jobs, onJobsChange: setJobs }: PipelineProps)
     setAdding(false);
   };
 
+  const sortJobs = (list: Job[]): Job[] =>
+    list.slice().sort((a, b) => {
+      if (sort === "score") {
+        const sa = atsScore(a.assessment_data);
+        const sb = atsScore(b.assessment_data);
+        // Unscored jobs sink to the bottom rather than reading as zero
+        if (sa == null && sb == null) return addedTime(b) - addedTime(a);
+        if (sa == null) return 1;
+        if (sb == null) return -1;
+        return sb - sa || addedTime(b) - addedTime(a);
+      }
+      if (sort === "newest") return addedTime(b) - addedTime(a);
+      if (sort === "oldest") return addedTime(a) - addedTime(b);
+      return (b.ranking ?? 0) - (a.ranking ?? 0) || addedTime(b) - addedTime(a);
+    });
+
   // Bucket every job into a column, skipping closed-out ones (Rejected, Passed).
   // Anything with an unrecognized status (e.g. a workflow_status value written
   // to status by an agent) lands in Research rather than disappearing.
@@ -92,6 +139,9 @@ export default function Pipeline({ jobs, onJobsChange: setJobs }: PipelineProps)
     if (isHiddenStatus(job.status)) continue;
     const bucket = jobsByColumn.get(job.status) ?? jobsByColumn.get("Research")!;
     bucket.push(job);
+  }
+  for (const col of COLUMNS) {
+    jobsByColumn.set(col.status, sortJobs(jobsByColumn.get(col.status) ?? []));
   }
 
   // Count from what's actually rendered, so the stat can't drift from the board
@@ -109,14 +159,117 @@ export default function Pipeline({ jobs, onJobsChange: setJobs }: PipelineProps)
   const interviews = countIn(["Recruiter Screen", "HM Screen"]);
   const offers = countIn(["Final / Offer"]);
 
+  // Jobs on the board whose posting the checker could no longer find
+  const downJobs = COLUMNS.flatMap(
+    (col) => jobsByColumn.get(col.status) ?? []
+  ).filter((j) => j.posting_status === "down");
+
+  const handleCloseAllDown = async () => {
+    setConfirmCloseDown(false);
+    setClosingDown(true);
+    const today = new Date().toISOString().slice(0, 10);
+
+    const results = await Promise.all(
+      downJobs.map(async (job) => {
+        const res = await fetch(`/api/jobs/${job.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            status: "Passed",
+            // Don't clobber a note that's already there
+            ...(job.last_action
+              ? {}
+              : { last_action: `Closed ${today} — posting not found` }),
+          }),
+        });
+        return res.ok ? job.id : null;
+      })
+    );
+
+    const closed = results.filter((id): id is string => id !== null);
+    if (closed.length > 0) {
+      setJobs((prev) =>
+        prev.map((j) =>
+          closed.includes(j.id) ? { ...j, status: "Passed" as JobStatus } : j
+        )
+      );
+    }
+
+    const failed = results.length - closed.length;
+    setNotice(
+      failed > 0
+        ? {
+            tone: "error",
+            text: `Closed ${closed.length}, but ${failed} failed — try again`,
+          }
+        : {
+            tone: "success",
+            text: `Closed ${closed.length} ${
+              closed.length === 1 ? "posting" : "postings"
+            } not found`,
+          }
+    );
+    setClosingDown(false);
+  };
+
   return (
     <div>
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
         <StatCard label="Active Jobs" value={activeCount} color="text-[#1F4E79]" />
         <StatCard label="In Progress" value={inProgress} color="text-amber-600" />
         <StatCard label="Interviews" value={interviews} color="text-orange-600" />
         <StatCard label="Offers" value={offers} color="text-green-600" />
+      </div>
+
+      {/* Toolbar */}
+      <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
+        <label className="flex items-center gap-1.5 text-xs text-gray-500">
+          Sort cards
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value as Sort)}
+            className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white text-gray-700 cursor-pointer focus:outline-none focus:border-[#1F4E79]"
+          >
+            {(Object.keys(SORT_LABELS) as Sort[]).map((s) => (
+              <option key={s} value={s}>
+                {SORT_LABELS[s]}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {downJobs.length > 0 &&
+          (confirmCloseDown ? (
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-gray-600">
+                Mark {downJobs.length} as Passed / Closed?
+              </span>
+              <button
+                onClick={handleCloseAllDown}
+                className="font-medium px-2.5 py-1.5 rounded-lg bg-orange-500 text-white hover:bg-orange-600 transition-colors"
+              >
+                Yes, close them
+              </button>
+              <button
+                onClick={() => setConfirmCloseDown(false)}
+                className="font-medium px-2.5 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setConfirmCloseDown(true)}
+              disabled={closingDown}
+              title="Mark every job whose posting was not found as Passed / Closed"
+              className="text-xs font-medium px-3 py-1.5 rounded-lg bg-orange-50 text-orange-700 border border-orange-200 hover:bg-orange-100 transition-colors disabled:opacity-50"
+            >
+              {closingDown
+                ? "Closing…"
+                : `⚠️ Close all postings not found (${downJobs.length})`}
+            </button>
+          ))}
       </div>
 
       {/* Kanban board */}
@@ -217,6 +370,21 @@ export default function Pipeline({ jobs, onJobsChange: setJobs }: PipelineProps)
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Bulk close confirmation / error */}
+      {notice && (
+        <div
+          role="status"
+          className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-40 text-sm font-medium px-4 py-2.5 rounded-lg shadow-lg ${
+            notice.tone === "success"
+              ? "bg-[#1F4E79] text-white"
+              : "bg-red-600 text-white"
+          }`}
+        >
+          {notice.tone === "success" ? "✓ " : "⚠ "}
+          {notice.text}
         </div>
       )}
     </div>
