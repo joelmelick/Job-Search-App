@@ -71,6 +71,17 @@ function parseSections(raw: string): { heading: string; body: string }[] {
     .filter(Boolean) as { heading: string; body: string }[];
 }
 
+// A contact section carries metadata (Title, LinkedIn, Connection, Why) and then
+// the note itself after a **Message:** marker, followed by a *(N chars)* count.
+// Copy should hand over just the note, ready to paste into LinkedIn.
+function extractMessage(body: string): string {
+  const found = body.match(/\*\*Message:?\*\*:?[ \t]*\n?([\s\S]*)/i);
+  if (!found) return body.trim(); // unknown format — fall back to the whole section
+  return found[1]
+    .replace(/\s*\*\([^)]*\)\*\s*$/, "") // trailing *(276 chars)* note
+    .trim();
+}
+
 function CopyButton({ text, label = "Copy" }: { text: string; label?: string }) {
   const [copied, setCopied] = useState(false);
   return (
@@ -144,7 +155,7 @@ function OutreachPane({
           <div key={i} className="border border-gray-100 rounded-xl p-5 bg-gray-50/50">
             <div className="flex items-center justify-between mb-3 gap-2">
               <h3 className="font-semibold text-gray-800 text-sm">{s.heading}</h3>
-              <CopyButton text={s.body} label="Copy message" />
+              <CopyButton text={extractMessage(s.body)} label="Copy message" />
             </div>
             <div
               className="md-content text-sm"
